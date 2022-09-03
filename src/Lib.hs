@@ -162,7 +162,9 @@ genNextTile grid = do
   -- TODO: generate candidates for each tile
   i <- getRandomR (0, length toGen - 1)
   let (tileIndex, options) = toGen ! i
-  if null options then return grid else do
-    newTile <- uniform options
-    let newTiles = gridTiles grid // [(tileIndex, Just newTile)]
-    return grid {gridTiles = newTiles}
+  if null options
+    then return grid
+    else do
+      newTile <- uniform options
+      let newTiles = gridTiles grid // [(tileIndex, Just newTile)]
+      return grid {gridTiles = newTiles}
