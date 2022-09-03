@@ -5,6 +5,7 @@ where
 
 import Control.Monad.Random (MonadRandom (getRandomR), Rand, RandomGen, uniform)
 import qualified Control.Monad.Random as Random
+import Data.List (intersect)
 import qualified Data.Maybe as Maybe
 import Data.Vector (Vector, (!), (//))
 import qualified Data.Vector as Vector
@@ -18,6 +19,33 @@ run = Gloss.playIO display background fps grid drawGrid handleEvent updateWorld
     display = Gloss.FullScreen
     background = Gloss.black
     grid = newGrid 10 10
+
+-- | A dictionary of matching tiles. Each entry is a list of 4 sub-lists for every side,
+-- going clockwise starting from upward direction. For each side a list of matching tiles is provided.
+tileConnections :: [(Tile, [[Tile]])]
+tileConnections =
+  [ ( Empty,
+      [ [Empty, Horizontal],
+        [Empty, Vertical],
+        [Empty, Horizontal],
+        [Empty, Vertical]
+      ]
+    ),
+    ( Horizontal,
+      [ [Empty, Horizontal],
+        [Horizontal],
+        [Empty, Horizontal],
+        [Horizontal]
+      ]
+    ),
+    ( Vertical,
+      [ [Vertical],
+        [Empty, Vertical],
+        [Vertical],
+        [Empty, Vertical]
+      ]
+    )
+  ]
 
 handleEvent :: Gloss.Event -> Grid -> IO Grid
 handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeySpace) Gloss.Down _ _) grid = Random.evalRandIO $ genNextTile grid
@@ -38,7 +66,7 @@ data Grid = Grid
     gridTiles :: Vector (Maybe Tile)
   }
 
-data Tile = Empty | Horizontal | Vertical
+data Tile = Empty | Horizontal | Vertical deriving (Eq)
 
 newGrid :: Int -> Int -> Grid
 newGrid width height =
@@ -89,11 +117,52 @@ gridLines width height =
     column x = Gloss.translate ((fromIntegral x - w / 2.0) * tileWidth) 0 $ Gloss.rectangleSolid lineWidth (h * tileHeight)
     row y = Gloss.translate 0 ((fromIntegral y - h / 2.0) * tileHeight) $ Gloss.rectangleSolid (w * tileWidth) lineWidth
 
+-- | Neighbours should be given in the following order: down, left, up, right
+genOptions :: [Tile] -> [Tile]
+genOptions neighbours =
+  foldl
+    intersect
+    allOptions
+    ( zipWith
+        ( \i tile ->
+            (!! i) . Maybe.fromJust $ (tile `lookup` tileConnections)
+        )
+        [0 ..]
+        neighbours
+    )
+  where
+    allOptions = [Empty, Horizontal, Vertical]
+
+inBounds :: Int -> Int -> Grid -> Bool
+inBounds x y grid = x >= 0 && x < width && y >= 0 && y < height
+  where
+    width = gridWidth grid
+    height = gridHeight grid
+
+getNeighbourIndices :: Int -> Grid -> [Int]
+getNeighbourIndices index grid =
+  map (\(x, y) -> x + y * width)
+    . filter (\(x, y) -> inBounds x y grid)
+    $ [(tileX, tileY + 1), (tileX + 1, tileY), (tileX, tileY - 1), (tileX - 1, tileY)]
+  where
+    width = gridWidth grid
+    tileX = index `mod` width
+    tileY = index `div` width
+
+getNeighbours :: Int -> Grid -> [Tile]
+getNeighbours index grid = Maybe.mapMaybe (\i -> gridTiles grid ! i) (getNeighbourIndices index grid)
+
 genNextTile :: (RandomGen g) => Grid -> Rand g Grid
 genNextTile grid = do
-  let toGen = Vector.map fst . Vector.filter (Maybe.isNothing . snd) . Vector.indexed $ gridTiles grid
+  let toGen =
+        Vector.map (\(i, _) -> (i, genOptions $ getNeighbours i grid))
+          . Vector.filter (Maybe.isNothing . snd)
+          . Vector.indexed
+          $ gridTiles grid
   -- TODO: generate candidates for each tile
   i <- getRandomR (0, length toGen - 1)
-  newTile <- uniform [Empty, Horizontal, Vertical]
-  let newTiles = gridTiles grid // [(toGen ! i, Just newTile)]
-  return grid {gridTiles = newTiles}
+  let (tileIndex, options) = toGen ! i
+  if null options then return grid else do
+    newTile <- uniform options
+    let newTiles = gridTiles grid // [(tileIndex, Just newTile)]
+    return grid {gridTiles = newTiles}
