@@ -5,7 +5,7 @@ where
 
 import Control.Monad.Random (MonadRandom (getRandomR), Rand, RandomGen, uniform)
 import qualified Control.Monad.Random as Random
-import Data.List (intersect)
+import Data.List (intersect, sortBy)
 import qualified Data.Maybe as Maybe
 import Data.Vector (Vector, (!), (//))
 import qualified Data.Vector as Vector
@@ -155,16 +155,21 @@ getNeighbours index grid = Maybe.mapMaybe (\i -> gridTiles grid ! i) (getNeighbo
 genNextTile :: (RandomGen g) => Grid -> Rand g Grid
 genNextTile grid = do
   let toGen =
-        Vector.map (\(i, _) -> (i, genOptions $ getNeighbours i grid))
-          . Vector.filter (Maybe.isNothing . snd)
-          . Vector.indexed
+        sortBy (\(_, a) (_, b) -> length a `compare` length b)
+          . map (\(i, _) -> (i, genOptions $ getNeighbours i grid))
+          . filter (Maybe.isNothing . snd)
+          . zip [0 ..]
+          . Vector.toList
           $ gridTiles grid
-  -- TODO: generate candidates for each tile
-  i <- getRandomR (0, length toGen - 1)
-  let (tileIndex, options) = toGen ! i
-  if null options
-    then return grid
-    else do
-      newTile <- uniform options
-      let newTiles = gridTiles grid // [(tileIndex, Just newTile)]
-      return grid {gridTiles = newTiles}
+  case toGen of
+    [] -> return grid
+    ((_, options) : _) -> do
+      let candidates = takeWhile ((== length options) . length . snd) toGen
+      i <- getRandomR (0, length candidates - 1)
+      let (tileIndex, choices) = candidates !! i
+      if null choices
+        then return grid
+        else do
+          newTile <- uniform choices
+          let newTiles = gridTiles grid // [(tileIndex, Just newTile)]
+          return grid {gridTiles = newTiles}
