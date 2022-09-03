@@ -12,13 +12,24 @@ import qualified Graphics.Gloss as Gloss
 import qualified Graphics.Gloss.Interface.IO.Game as Gloss
 import Prelude hiding (Left, Right)
 
+data World = World
+  { worldContinuousGen :: Bool,
+    worldGrid :: Grid
+  }
+
+initialWorld :: World
+initialWorld =
+  World
+    { worldContinuousGen = False,
+      worldGrid = newGrid 10 10
+    }
+
 run :: IO ()
-run = Gloss.playIO display background fps grid drawGrid handleEvent updateWorld
+run = Gloss.playIO display background fps initialWorld renderWorld handleEvent updateWorld
   where
     fps = 60
     display = Gloss.FullScreen
     background = Gloss.black
-    grid = newGrid 10 10
 
 -- | Returns a dictionary of matching tiles for each side of a tile.
 tileMatches :: TileType -> [(Direction, [Tile])]
@@ -39,12 +50,26 @@ tileMatches tile = matchingTiles . Maybe.fromJust $ tile `lookup` tileConnection
                        $ (tileType tile' `lookup` tileConnections)
                    )
 
-handleEvent :: Gloss.Event -> Grid -> IO Grid
-handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeySpace) Gloss.Down _ _) grid = Random.evalRandIO $ genNextTile grid
+handleEvent :: Gloss.Event -> World -> IO World
+handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeySpace) _ _ _) world = do
+  return $ world {worldContinuousGen = not (worldContinuousGen world)}
+handleEvent (Gloss.EventKey (Gloss.Char 'r') Gloss.Down _ _) world = do
+  return $ world {worldGrid = newGrid 10 10}
+handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeyEnter) Gloss.Down _ _) world = do
+  grid' <- Random.evalRandIO $ genNextTile (worldGrid world)
+  return $ world {worldGrid = grid'}
 handleEvent _ grid = return grid
 
-updateWorld :: Float -> Grid -> IO Grid
-updateWorld _ = return
+updateWorld :: Float -> World -> IO World
+updateWorld _ world =
+  if worldContinuousGen world
+    then do
+      grid' <- Random.evalRandIO $ genNextTile (worldGrid world)
+      return $ world {worldGrid = grid'}
+    else return world
+
+renderWorld :: World -> IO Gloss.Picture
+renderWorld world = drawGrid (worldGrid world)
 
 tileSize :: (Float, Float)
 tileSize = (50, 50)
