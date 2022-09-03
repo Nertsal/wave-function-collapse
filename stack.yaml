@@ -40,7 +40,9 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-# extra-deps: []
+extra-deps:
+- MonadRandom-0.1.13@sha256:69bb1f7979c96aa76e3adaa91785d39e9e8a4855d96ef805e31e5dfd2ceecc15,855
+- random-1.1@sha256:7b67624fd76ddf97c206de0801dc7e888097e9d572974be9b9ea6551d76965df,1777
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
