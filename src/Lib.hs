@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module Lib where
+module Lib (run) where
 
 import Control.Monad.Random (MonadRandom (getRandomR), Rand, RandomGen, uniform)
 import qualified Control.Monad.Random as Random
