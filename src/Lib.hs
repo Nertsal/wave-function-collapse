@@ -1,7 +1,6 @@
-module Lib
-  ( run,
-  )
-where
+{-# LANGUAGE TupleSections #-}
+
+module Lib where
 
 import Control.Monad.Random (MonadRandom (getRandomR), Rand, RandomGen, uniform)
 import qualified Control.Monad.Random as Random
@@ -11,6 +10,7 @@ import Data.Vector (Vector, (!), (//))
 import qualified Data.Vector as Vector
 import qualified Graphics.Gloss as Gloss
 import qualified Graphics.Gloss.Interface.IO.Game as Gloss
+import Prelude hiding (Left, Right)
 
 run :: IO ()
 run = Gloss.playIO display background fps grid drawGrid handleEvent updateWorld
@@ -20,32 +20,24 @@ run = Gloss.playIO display background fps grid drawGrid handleEvent updateWorld
     background = Gloss.black
     grid = newGrid 10 10
 
--- | A dictionary of matching tiles. Each entry is a list of 4 sub-lists for every side,
--- going clockwise starting from upward direction. For each side a list of matching tiles is provided.
-tileConnections :: [(Tile, [[Tile]])]
-tileConnections =
-  [ ( Empty,
-      [ [Empty, Horizontal],
-        [Empty, Vertical],
-        [Empty, Horizontal],
-        [Empty, Vertical]
-      ]
-    ),
-    ( Horizontal,
-      [ [Empty, Horizontal],
-        [Horizontal],
-        [Empty, Horizontal],
-        [Horizontal]
-      ]
-    ),
-    ( Vertical,
-      [ [Vertical],
-        [Empty, Vertical],
-        [Vertical],
-        [Empty, Vertical]
-      ]
-    )
-  ]
+-- | Returns a dictionary of matching tiles for each side of a tile.
+tileMatches :: TileType -> [(Direction, [Tile])]
+tileMatches tile = matchingTiles . Maybe.fromJust $ tile `lookup` tileConnections
+  where
+    matchingTiles :: [(Direction, Bool)] -> [(Direction, [Tile])]
+    matchingTiles = map matchConnection
+
+    matchConnection :: (Direction, Bool) -> (Direction, [Tile])
+    matchConnection (direction, isConnected) = (direction, filter checkTile allTileOrientations)
+      where
+        checkTile tile' =
+          let dir = rotateDirection (negativeDirection (tileDirection tile')) (oppositeDirection direction)
+           in isConnected
+                == ( Maybe.fromJust
+                       . lookup dir
+                       . Maybe.fromJust
+                       $ (tileType tile' `lookup` tileConnections)
+                   )
 
 handleEvent :: Gloss.Event -> Grid -> IO Grid
 handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeySpace) Gloss.Down _ _) grid = Random.evalRandIO $ genNextTile grid
@@ -66,7 +58,88 @@ data Grid = Grid
     gridTiles :: Vector (Maybe Tile)
   }
 
-data Tile = Empty | Horizontal | Vertical deriving (Eq)
+data Tile = Tile
+  { tileDirection :: Direction,
+    tileType :: TileType
+  }
+  deriving (Show, Eq)
+
+data Direction = Up | Right | Down | Left deriving (Show, Eq)
+
+data TileType = Empty | Straight | Tri deriving (Show, Eq)
+
+allDirections :: [Direction]
+allDirections = [Up, Right, Down, Left]
+
+allTileTypes :: [TileType]
+allTileTypes = [Empty, Straight, Tri]
+
+-- | A dictionary of tile connections if the default orientation (upwards).
+tileConnections :: [(TileType, [(Direction, Bool)])]
+tileConnections =
+  [ ( Empty,
+      [ (Up, False),
+        (Right, False),
+        (Down, False),
+        (Left, False)
+      ]
+    ),
+    ( Straight,
+      [ (Up, False),
+        (Right, True),
+        (Down, False),
+        (Left, True)
+      ]
+    ),
+    ( Tri,
+      [ (Up, True),
+        (Right, True),
+        (Down, False),
+        (Left, True)
+      ]
+    )
+  ]
+
+allTileOrientations :: [Tile]
+allTileOrientations =
+  concatMap
+    ( \typ ->
+        map (\direction -> Tile {tileDirection = direction, tileType = typ}) allDirections
+    )
+    allTileTypes
+
+directionRotation :: Direction -> Float
+directionRotation Up = 0
+directionRotation Right = 90
+directionRotation Down = 180
+directionRotation Left = 270
+
+oppositeDirection :: Direction -> Direction
+oppositeDirection Up = Down
+oppositeDirection Right = Left
+oppositeDirection Down = Up
+oppositeDirection Left = Right
+
+negativeDirection :: Direction -> Direction
+negativeDirection Up = Up
+negativeDirection Right = Left
+negativeDirection Down = Down
+negativeDirection Left = Right
+
+rotateDirection :: Direction -> Direction -> Direction
+rotateDirection a b = getRotation ((rotationIndex a + rotationIndex b :: Int) `mod` 4)
+  where
+    rotationIndex dir = case dir of
+      Up -> 0
+      Right -> 1
+      Down -> 2
+      Left -> 3
+    getRotation index = case index of
+      0 -> Up
+      1 -> Right
+      2 -> Down
+      3 -> Left
+      _ -> undefined
 
 newGrid :: Int -> Int -> Grid
 newGrid width height =
@@ -100,10 +173,12 @@ tilePicture :: Tile -> Gloss.Picture
 tilePicture tile =
   let (w, h) = tileSize
       bg = Gloss.color (Gloss.greyN 0.5) $ Gloss.rectangleSolid w h
-   in case tile of
-        Empty -> bg
-        Horizontal -> bg <> Gloss.color Gloss.blue (Gloss.rectangleSolid w (h * 0.3))
-        Vertical -> bg <> Gloss.color Gloss.blue (Gloss.rectangleSolid (w * 0.3) h)
+      rotation = directionRotation (tileDirection tile)
+      picture = case tileType tile of
+        Empty -> Gloss.blank
+        Straight -> Gloss.color Gloss.blue (Gloss.rectangleSolid w (h * 0.3))
+        Tri -> Gloss.color Gloss.blue (Gloss.rectangleSolid w (h * 0.3) <> Gloss.translate 0 (h * 0.25) (Gloss.rectangleSolid (w * 0.3) (h * 0.5)))
+   in bg <> Gloss.rotate rotation picture
 
 gridLines :: Int -> Int -> Gloss.Picture
 gridLines width height =
@@ -117,21 +192,23 @@ gridLines width height =
     column x = Gloss.translate ((fromIntegral x - w / 2.0) * tileWidth) 0 $ Gloss.rectangleSolid lineWidth (h * tileHeight)
     row y = Gloss.translate 0 ((fromIntegral y - h / 2.0) * tileHeight) $ Gloss.rectangleSolid (w * tileWidth) lineWidth
 
--- | Neighbours should be given in the following order: down, left, up, right
-genOptions :: [Tile] -> [Tile]
+genOptions :: [(Direction, Tile)] -> [Tile]
 genOptions neighbours =
   foldl
     intersect
-    allOptions
-    ( zipWith
-        ( \i tile ->
-            (!! i) . Maybe.fromJust $ (tile `lookup` tileConnections)
+    allTileOrientations
+    ( map
+        ( \(dir, tile) ->
+            map
+              (\newTile -> newTile {tileDirection = rotateDirection (tileDirection newTile) (tileDirection tile)})
+              ( Maybe.fromJust
+                  ( let direction = rotateDirection (negativeDirection (tileDirection tile)) (oppositeDirection dir)
+                     in direction `lookup` tileMatches (tileType tile)
+                  )
+              )
         )
-        [0 ..]
         neighbours
     )
-  where
-    allOptions = [Empty, Horizontal, Vertical]
 
 inBounds :: Int -> Int -> Grid -> Bool
 inBounds x y grid = x >= 0 && x < width && y >= 0 && y < height
@@ -139,23 +216,29 @@ inBounds x y grid = x >= 0 && x < width && y >= 0 && y < height
     width = gridWidth grid
     height = gridHeight grid
 
-getNeighbourIndices :: Int -> Grid -> [Int]
+getNeighbourIndices :: Int -> Grid -> [(Direction, Int)]
 getNeighbourIndices index grid =
-  map (\(x, y) -> x + y * width)
-    . filter (\(x, y) -> inBounds x y grid)
-    $ [(tileX, tileY + 1), (tileX + 1, tileY), (tileX, tileY - 1), (tileX - 1, tileY)]
+  map (\(dir, x, y) -> (dir, x + y * width))
+    . filter (\(_, x, y) -> inBounds x y grid)
+    $ [(Up, tileX, tileY + 1), (Right, tileX + 1, tileY), (Down, tileX, tileY - 1), (Left, tileX - 1, tileY)]
   where
     width = gridWidth grid
     tileX = index `mod` width
     tileY = index `div` width
 
-getNeighbours :: Int -> Grid -> [Tile]
-getNeighbours index grid = Maybe.mapMaybe (\i -> gridTiles grid ! i) (getNeighbourIndices index grid)
+getNeighbours :: Int -> Grid -> [(Direction, Tile)]
+getNeighbours index grid =
+  Maybe.mapMaybe
+    ( \(dir, i) ->
+        fmap (dir,) (gridTiles grid ! i)
+    )
+    (getNeighbourIndices index grid)
 
 genNextTile :: (RandomGen g) => Grid -> Rand g Grid
 genNextTile grid = do
   let toGen =
-        sortBy (\(_, a) (_, b) -> length a `compare` length b)
+        dropWhile (null . snd)
+          . sortBy (\(_, a) (_, b) -> length a `compare` length b)
           . map (\(i, _) -> (i, genOptions $ getNeighbours i grid))
           . filter (Maybe.isNothing . snd)
           . zip [0 ..]
