@@ -17,7 +17,7 @@ import qualified System.Exit
 
 data TileAsset = TileAsset
   { tilePath :: FilePath,
-    tileConnections :: [Connection]
+    tileConnections :: [[Connection]]
   }
   deriving (Generic, Show, Aeson.FromJSON)
 
@@ -46,5 +46,13 @@ validate asset = do
   let expected = length Direction.allDirections * Constants.connectionsPerSide
   let actual = length (tileConnections asset)
   if expected /= actual
-    then System.Exit.die ("The number of connections for tile " ++ show (tilePath asset) ++ " did not match the expected value " ++ show expected ++ ". Actual value is " ++ show actual)
+    then
+      System.Exit.die
+        ( "The number of connections per side for the tile "
+            ++ show (tilePath asset)
+            ++ " did not match the expected value "
+            ++ show expected
+            ++ ". Actual value is "
+            ++ show actual
+        )
     else return asset

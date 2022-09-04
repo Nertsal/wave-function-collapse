@@ -16,7 +16,7 @@ data World = World
 
 data Assets = Assets
   { assetTiles :: [(TileType, Gloss.Picture)],
-    assetTileConnections :: [(TileType, [Connection])]
+    assetTileConnections :: [(TileType, [[Connection]])]
   }
 
 data Grid = Grid

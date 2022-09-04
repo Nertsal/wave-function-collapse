@@ -1,7 +1,6 @@
 module Lib.Tile (tileMatches, allTileOrientations) where
 
 import qualified Data.Maybe as Maybe
-import qualified Lib.Constants as Constants
 import qualified Lib.Direction as Direction
 import Lib.Types
 
@@ -10,7 +9,7 @@ tileMatches :: Assets -> TileType -> [(Direction, [Tile])]
 tileMatches assets tile = matchingTiles assets . Maybe.fromJust $ tile `lookup` assetTileConnections assets
 
 -- | Given a list of connections of a tile, returns a list of matching tiles for every side.
-matchingTiles :: Assets -> [Connection] -> [(Direction, [Tile])]
+matchingTiles :: Assets -> [[Connection]] -> [(Direction, [Tile])]
 matchingTiles assets connections =
   map
     (matchConnection assets . (\dir -> (dir, getSideConnections dir connections)))
@@ -29,11 +28,10 @@ matchConnection assets (direction, connections) = (direction, filter checkTile a
                )
 
 -- | From a list of all connections, return connections for a specific side
-getSideConnections :: Direction -> [Connection] -> [Connection]
+getSideConnections :: Direction -> [[Connection]] -> [Connection]
 getSideConnections side connections =
   let i = Direction.directionIndex side
-      n = Constants.connectionsPerSide
-   in take n (drop (i * n) connections)
+   in connections !! i
 
 allTileTypes :: [TileType]
 allTileTypes = [TileEmpty, TileStraight, TileTri, TileTurn]

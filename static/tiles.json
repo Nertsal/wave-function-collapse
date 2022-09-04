@@ -3,28 +3,28 @@
     "TileEmpty",
     {
       "tilePath": "static/empty.png",
-      "tileConnections": [null, null, null, null]
+      "tileConnections": [[null], [null], [null], [null]]
     }
   ],
   [
     "TileStraight",
     {
       "tilePath": "static/straight.png",
-      "tileConnections": [null, "A", null, "A"]
+      "tileConnections": [[null], ["A"], [null], ["A"]]
     }
   ],
   [
     "TileTri",
     {
       "tilePath": "static/tri.png",
-      "tileConnections": ["A", "A", null, "A"]
+      "tileConnections": [["A"], ["A"], [null], ["A"]]
     }
   ],
   [
     "TileTurn",
     {
       "tilePath": "static/turn.png",
-      "tileConnections": ["A", null, null, "A"]
+      "tileConnections": [["A"], [null], [null], ["A"]]
     }
   ]
 ]
