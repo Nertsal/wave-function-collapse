@@ -4,6 +4,7 @@ import qualified Control.Monad.Random as Random
 import qualified Graphics.Gloss.Interface.IO.Game as Gloss
 import qualified Lib.Grid as Grid
 import Lib.Types
+import qualified Lib.Constants as Constants
 
 initialize :: Assets -> World
 initialize assets =
@@ -11,14 +12,14 @@ initialize assets =
     { worldAssets = assets,
       worldAutoRestart = False,
       worldContinuousGen = False,
-      worldGrid = Grid.newGrid 20 20
+      worldGrid = Grid.newGrid Constants.worldSize
     }
 
 handleEvent :: Gloss.Event -> World -> IO World
 handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeySpace) _ _ _) world = do
   return $ world {worldContinuousGen = not (worldContinuousGen world)}
 handleEvent (Gloss.EventKey (Gloss.Char 'r') Gloss.Down _ _) world = do
-  return $ world {worldGrid = Grid.newGrid 20 20}
+  return $ world {worldGrid = Grid.newGrid Constants.worldSize}
 handleEvent (Gloss.EventKey (Gloss.Char 'p') Gloss.Down _ _) world = do
   return $ world {worldAutoRestart = not (worldAutoRestart world)}
 handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeyEnter) Gloss.Down _ _) world = do

@@ -13,8 +13,8 @@ import qualified Lib.Direction as Direction
 import qualified Lib.Tile as Tile
 import Lib.Types
 
-newGrid :: Int -> Int -> Grid
-newGrid width height =
+newGrid :: (Int, Int) -> Grid
+newGrid (width, height) =
   Grid
     { gridWidth = width,
       gridHeight = height,
@@ -114,18 +114,18 @@ genNextTile assets grid autoRestart = do
           $ gridTiles grid
   -- Auto restart when some tile has no possible generation options
   if autoRestart && not (null toGen) && (null . snd . head) toGen
-    then return (newGrid (gridWidth grid) (gridHeight grid))
-    else 
+    then return (newGrid (gridWidth grid, gridHeight grid))
+    else
       let gen = dropWhile (null . snd) toGen
        in case gen of
-      [] -> return grid
-      ((_, options) : _) -> do
-        let candidates = takeWhile ((== length options) . length . snd) gen
-        i <- getRandomR (0, length candidates - 1)
-        let (tileIndex, choices) = candidates !! i
-        if null choices
-          then return grid
-          else do
-            newTile <- uniform choices
-            let newTiles = gridTiles grid // [(tileIndex, Just newTile)]
-            return grid {gridTiles = newTiles}
+            [] -> return grid
+            ((_, options) : _) -> do
+              let candidates = takeWhile ((== length options) . length . snd) gen
+              i <- getRandomR (0, length candidates - 1)
+              let (tileIndex, choices) = candidates !! i
+              if null choices
+                then return grid
+                else do
+                  newTile <- uniform choices
+                  let newTiles = gridTiles grid // [(tileIndex, Just newTile)]
+                  return grid {gridTiles = newTiles}
