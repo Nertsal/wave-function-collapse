@@ -9,7 +9,6 @@ import qualified Control.Monad.Random as Random
 import qualified Data.Aeson as Aeson
 import qualified Data.Bifunctor
 import qualified Data.ByteString.Lazy as BS
-import qualified Data.ByteString.Lazy.Char8 as BSChar8
 import Data.List (intersect, sortBy)
 import qualified Data.Maybe as Maybe
 import Data.Vector (Vector, (!), (//))
@@ -36,7 +35,7 @@ initialize assets =
   World
     { worldAssets = assets,
       worldContinuousGen = False,
-      worldGrid = newGrid 10 10
+      worldGrid = newGrid 20 20
     }
 
 run :: IO ()
@@ -45,7 +44,7 @@ run = do
   let world = initialize assets
   Gloss.playIO display background fps world renderWorld handleEvent updateWorld
   where
-    fps = 60
+    fps = 120
     display = Gloss.FullScreen
     background = Gloss.black
 
@@ -67,7 +66,7 @@ loadAssets = do
       return Assets {assetTiles = tiles, assetTileConnections = connections}
   where
     process :: Maybe Gloss.Picture -> Gloss.Picture
-    process = Gloss.scale 4 4 . Maybe.fromJust
+    process = Gloss.scale 4.5 4.5 . Maybe.fromJust
 
     loadTilePicture :: TileAsset -> IO Gloss.Picture
     loadTilePicture asset = do
@@ -96,7 +95,7 @@ handleEvent :: Gloss.Event -> World -> IO World
 handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeySpace) _ _ _) world = do
   return $ world {worldContinuousGen = not (worldContinuousGen world)}
 handleEvent (Gloss.EventKey (Gloss.Char 'r') Gloss.Down _ _) world = do
-  return $ world {worldGrid = newGrid 10 10}
+  return $ world {worldGrid = newGrid 20 20}
 handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeyEnter) Gloss.Down _ _) world = do
   grid' <- Random.evalRandIO $ genNextTile (worldAssets world) (worldGrid world)
   return $ world {worldGrid = grid'}
