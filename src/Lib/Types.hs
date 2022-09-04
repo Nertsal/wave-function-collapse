@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Lib.Types (World (..), Assets (..), Grid (..), Tile (..), TileType (..), Direction (..), Connection, ConnectionType) where
+module Lib.Types (World (..), Assets (..), Grid (..), Tile (..), TileType, Direction (..), Connection, ConnectionType) where
 
 import qualified Data.Aeson as Aeson
 import Data.Vector (Vector)
@@ -31,7 +31,7 @@ data Tile = Tile
   }
   deriving (Show, Eq)
 
-data TileType = TileEmpty | TileStraight | TileTri | TileTurn | TileFork deriving (Generic, Show, Eq, Read, Aeson.FromJSON)
+type TileType = String
 
 data Direction = DirUp | DirRight | DirDown | DirLeft deriving (Show, Eq, Generic, Aeson.FromJSON)
 
