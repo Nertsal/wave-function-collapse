@@ -11,7 +11,6 @@ import GHC.Generics (Generic)
 import qualified Graphics.Gloss as Gloss
 import qualified Graphics.Gloss.Juicy as Juicy
 import qualified Lib.Constants as Constants
-import qualified Lib.Direction as Direction
 import Lib.Types
 import qualified System.Exit
 
@@ -42,17 +41,21 @@ loadAssets = do
 
 -- | Checks tile asset for validity: the number of connections
 validate :: TileAsset -> IO TileAsset
-validate asset = do
-  let expected = length Direction.allDirections * Constants.connectionsPerSide
-  let actual = length (tileConnections asset)
-  if expected /= actual
-    then
-      System.Exit.die
-        ( "The number of connections per side for the tile "
-            ++ show (tilePath asset)
-            ++ " did not match the expected value "
-            ++ show expected
-            ++ ". Actual value is "
-            ++ show actual
-        )
-    else return asset
+validate a = validate' (tileConnections a) a
+  where
+    validate' :: [[Connection]] -> TileAsset -> IO TileAsset
+    validate' [] asset = return asset
+    validate' (cs : css) asset = do
+      let expected = Constants.connectionsPerSide
+      let actual = length cs
+      if expected /= actual
+        then
+          System.Exit.die
+            ( "The number of connections per side for the tile "
+                ++ show (tilePath asset)
+                ++ " did not match the expected value "
+                ++ show expected
+                ++ ". Actual value is "
+                ++ show actual
+            )
+        else validate' css asset
