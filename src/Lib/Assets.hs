@@ -10,12 +10,14 @@ import qualified Data.Maybe as Maybe
 import GHC.Generics (Generic)
 import qualified Graphics.Gloss as Gloss
 import qualified Graphics.Gloss.Juicy as Juicy
+import qualified Lib.Constants as Constants
+import qualified Lib.Direction as Direction
 import Lib.Types
 import qualified System.Exit
 
 data TileAsset = TileAsset
   { tilePath :: FilePath,
-    tileConnections :: [Direction]
+    tileConnections :: [Connection]
   }
   deriving (Generic, Show, Aeson.FromJSON)
 
@@ -25,9 +27,9 @@ loadAssets = do
   let result = Aeson.eitherDecode contents :: Either String [(TileType, TileAsset)]
   case result of
     Left err -> System.Exit.die err
-    Right tileAssets -> do
-      tiles <- mapM (\(tile, asset) -> do picture <- loadTilePicture asset; return (tile, picture)) tileAssets
-      let connections = map (Data.Bifunctor.second tileConnections) tileAssets
+    Right tileAsset -> do
+      tiles <- mapM (\(tile, asset) -> do _ <- validate asset; picture <- loadTilePicture asset; return (tile, picture)) tileAsset
+      let connections = map (Data.Bifunctor.second tileConnections) tileAsset
       return Assets {assetTiles = tiles, assetTileConnections = connections}
   where
     process :: Maybe Gloss.Picture -> Gloss.Picture
@@ -37,3 +39,12 @@ loadAssets = do
     loadTilePicture asset = do
       picture <- Juicy.loadJuicyPNG (tilePath asset)
       return (process picture)
+
+-- | Checks tile asset for validity: the number of connections
+validate :: TileAsset -> IO TileAsset
+validate asset = do
+  let expected = length Direction.allDirections * Constants.connectionsPerSide
+  let actual = length (tileConnections asset)
+  if expected /= actual
+    then System.Exit.die ("The number of connections for tile " ++ show (tilePath asset) ++ " did not match the expected value " ++ show expected ++ ". Actual value is " ++ show actual)
+    else return asset

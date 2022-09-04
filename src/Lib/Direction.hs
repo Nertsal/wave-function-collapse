@@ -1,4 +1,4 @@
-module Lib.Direction (allDirections, rotation, opposite, negative, rotate) where
+module Lib.Direction (allDirections, rotation, opposite, negative, rotate, directionIndex) where
 
 import Lib.Types (Direction (..))
 
@@ -24,16 +24,19 @@ negative DirDown = DirDown
 negative DirLeft = DirRight
 
 rotate :: Direction -> Direction -> Direction
-rotate a b = getRotation ((rotationIndex a + rotationIndex b :: Int) `mod` 4)
-  where
-    rotationIndex dir = case dir of
-      DirUp -> 0
-      DirRight -> 1
-      DirDown -> 2
-      DirLeft -> 3
-    getRotation index = case index of
-      0 -> DirUp
-      1 -> DirRight
-      2 -> DirDown
-      3 -> DirLeft
-      _ -> undefined
+rotate a b = getRotation ((directionIndex a + directionIndex b :: Int) `mod` 4)
+
+directionIndex :: Num p => Direction -> p
+directionIndex dir = case dir of
+  DirUp -> 0
+  DirRight -> 1
+  DirDown -> 2
+  DirLeft -> 3
+
+getRotation :: (Eq a, Num a) => a -> Direction
+getRotation index = case index of
+  0 -> DirUp
+  1 -> DirRight
+  2 -> DirDown
+  3 -> DirLeft
+  _ -> undefined
