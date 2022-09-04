@@ -17,7 +17,7 @@ matchingTiles assets connections =
 
 -- | Given a list of connections for a single side, returns a list of matching tiles for that side.
 matchConnection :: Assets -> (Direction, [Connection]) -> (Direction, [Tile])
-matchConnection assets (direction, connections) = (direction, filter checkTile allTileOrientations)
+matchConnection assets (direction, connections) = (direction, filter checkTile (allTileOrientations assets))
   where
     checkTile tile =
       let dir = Direction.rotate (Direction.negative (tileDirection tile)) (Direction.opposite direction)
@@ -33,13 +33,13 @@ getSideConnections side connections =
   let i = Direction.directionIndex side
    in connections !! i
 
-allTileTypes :: [TileType]
-allTileTypes = [TileEmpty, TileStraight, TileTri, TileTurn, TileFork]
+allTileTypes :: Assets -> [TileType]
+allTileTypes assets = map fst (assetTiles assets)
 
-allTileOrientations :: [Tile]
-allTileOrientations =
+allTileOrientations :: Assets -> [Tile]
+allTileOrientations assets =
   concatMap
     ( \typ ->
         map (\direction -> Tile {tileDirection = direction, tileType = typ}) Direction.allDirections
     )
-    allTileTypes
+    (allTileTypes assets)

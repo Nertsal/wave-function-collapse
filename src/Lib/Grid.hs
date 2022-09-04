@@ -65,7 +65,7 @@ genOptions :: Assets -> [(Direction, Tile)] -> [Tile]
 genOptions assets neighbours =
   foldl
     intersect
-    Tile.allTileOrientations
+    (Tile.allTileOrientations assets)
     ( map
         ( \(dir, tile) ->
             map
