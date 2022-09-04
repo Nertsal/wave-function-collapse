@@ -29,8 +29,9 @@ data WFC = WFC
     wfcHistory :: Vector HistoryEntry
   }
 
-newtype HistoryEntry = HistoryEntry
-  { entryTiles :: Vector (Maybe Tile)
+data HistoryEntry = HistoryEntry
+  { entryTiles :: Vector (Maybe Tile),
+    entryOptions :: [(Int, [Tile])]
   }
 
 data Tile = Tile

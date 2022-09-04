@@ -3,6 +3,7 @@
 module Lib.WFC (newWFC, drawWFC, genNextTile) where
 
 import Control.Monad.Random (Rand, RandomGen, getRandomR, uniform)
+import qualified Data.Bifunctor
 import Data.List (intersect, sortBy)
 import qualified Data.Maybe as Maybe
 import Data.Vector (Vector, (!), (//))
@@ -19,7 +20,7 @@ newWFC (width, height) =
     { wfcWidth = width,
       wfcHeight = height,
       wfcTiles = Vector.replicate (width * height) Nothing,
-      wfcHistory = Vector.singleton HistoryEntry {entryTiles = Vector.replicate (width * height) Nothing}
+      wfcHistory = mempty
     }
 
 drawWFC :: Assets -> WFC -> IO Gloss.Picture
@@ -128,8 +129,8 @@ chooseAmongBest options = do
   let candidates = takeWhile ((== best) . length . snd) options
   getRandomR (0, length candidates - 1)
 
--- removeOption :: [(Int, [Tile])] -> Int -> [(Int, [Tile])]
--- removeOption options i = map (Data.Bifunctor.second (map snd . filter ((/= i) . fst) . zip [0 ..])) options
+removeOption :: [(Int, [Tile])] -> Int -> [(Int, [Tile])]
+removeOption options i = map (Data.Bifunctor.second (map snd . filter ((/= i) . fst) . zip [0 ..])) options
 
 -- | Picks a random choice among the ones with the lowest entropy (the number of options).
 applyRandomOption :: (RandomGen g) => [(Int, [Tile])] -> WFC -> Rand g WFC
@@ -141,7 +142,7 @@ applyRandomOption options wfc =
           i <- chooseAmongBest gen
           let (tileIndex, choices) = gen !! i
           if null choices
-            then return wfc
+            then return wfc -- A safety check that is repeated (from rollback and genNextTile) just in case
             else do
               newTile <- uniform choices
               let newTiles = wfcTiles wfc // [(tileIndex, Just newTile)]
@@ -151,8 +152,8 @@ applyRandomOption options wfc =
                     wfcHistory =
                       wfcHistory wfc
                         `Vector.snoc` HistoryEntry
-                          { entryTiles = newTiles
-                          -- entryOptions = removeOption gen i
+                          { entryTiles = wfcTiles wfc,
+                            entryOptions = removeOption gen i
                           }
                   }
 
@@ -160,7 +161,7 @@ rollback :: (RandomGen g) => Assets -> WFC -> Rand g WFC
 rollback assets wfc =
   let entry = Vector.last (wfcHistory wfc)
       wfc' = wfc {wfcTiles = entryTiles entry, wfcHistory = Vector.init (wfcHistory wfc)}
-      toGen = generateOptions assets wfc'
+      toGen = entryOptions entry
    in if not (null toGen) && (null . snd . head) toGen
         then rollback assets wfc'
         else applyRandomOption toGen wfc'

@@ -11,6 +11,6 @@ run = do
   let world = initialize assets
   Gloss.playIO display background fps world renderWorld handleEvent updateWorld
   where
-    fps = 120
+    fps = 60
     display = Gloss.FullScreen
     background = Gloss.black
