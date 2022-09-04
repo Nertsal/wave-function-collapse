@@ -35,6 +35,7 @@ library
       MonadRandom ==0.1.*
     , base >=4.7 && <5
     , gloss ==1.13.*
+    , gloss-juicy ==0.2.*
     , vector ==0.12.*
   default-language: Haskell2010
 
@@ -49,6 +50,7 @@ executable wave-function-collapse-hs-exe
       MonadRandom ==0.1.*
     , base >=4.7 && <5
     , gloss ==1.13.*
+    , gloss-juicy ==0.2.*
     , vector ==0.12.*
     , wave-function-collapse-hs
   default-language: Haskell2010
@@ -65,6 +67,7 @@ test-suite wave-function-collapse-hs-test
       MonadRandom ==0.1.*
     , base >=4.7 && <5
     , gloss ==1.13.*
+    , gloss-juicy ==0.2.*
     , vector ==0.12.*
     , wave-function-collapse-hs
   default-language: Haskell2010

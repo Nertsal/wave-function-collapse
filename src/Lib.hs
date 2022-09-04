@@ -10,26 +10,48 @@ import Data.Vector (Vector, (!), (//))
 import qualified Data.Vector as Vector
 import qualified Graphics.Gloss as Gloss
 import qualified Graphics.Gloss.Interface.IO.Game as Gloss
+import qualified Graphics.Gloss.Juicy as Juicy
 import Prelude hiding (Left, Right)
 
 data World = World
-  { worldContinuousGen :: Bool,
+  { worldAssets :: Assets,
+    worldContinuousGen :: Bool,
     worldGrid :: Grid
   }
 
-initialWorld :: World
-initialWorld =
+data Assets = Assets
+  { assetEmpty :: Gloss.Picture,
+    assetStraight :: Gloss.Picture,
+    assetTri :: Gloss.Picture
+  }
+
+initialize :: Assets -> World
+initialize assets =
   World
-    { worldContinuousGen = False,
+    { worldAssets = assets,
+      worldContinuousGen = False,
       worldGrid = newGrid 10 10
     }
 
 run :: IO ()
-run = Gloss.playIO display background fps initialWorld renderWorld handleEvent updateWorld
+run = do
+  assets <- loadAssets
+  let world = initialize assets
+  Gloss.playIO display background fps world renderWorld handleEvent updateWorld
   where
     fps = 60
     display = Gloss.FullScreen
     background = Gloss.black
+
+loadAssets :: IO Assets
+loadAssets = do
+  empty <- Juicy.loadJuicyPNG "static/empty.png"
+  straight <- Juicy.loadJuicyPNG "static/straight.png"
+  tri <- Juicy.loadJuicyPNG "static/tri.png"
+  return Assets {assetEmpty = process empty, assetStraight = process straight, assetTri = process tri}
+  where
+    process :: Maybe Gloss.Picture -> Gloss.Picture
+    process = Gloss.scale 4 4 . Maybe.fromJust
 
 -- | Returns a dictionary of matching tiles for each side of a tile.
 tileMatches :: TileType -> [(Direction, [Tile])]
@@ -68,7 +90,7 @@ updateWorld _ world =
     else return world
 
 renderWorld :: World -> IO Gloss.Picture
-renderWorld world = drawGrid (worldGrid world)
+renderWorld world = drawGrid (worldAssets world) (worldGrid world)
 
 tileSize :: (Float, Float)
 tileSize = (50, 50)
@@ -155,14 +177,14 @@ newGrid width height =
       gridTiles = Vector.replicate (width * height) Nothing
     }
 
-drawGrid :: Grid -> IO Gloss.Picture
-drawGrid grid = do
+drawGrid :: Assets -> Grid -> IO Gloss.Picture
+drawGrid assets grid = do
   let width = gridWidth grid
       height = gridHeight grid
-  return $ gridLines width height <> gridCells width height (gridTiles grid)
+  return $ gridLines width height <> gridCells assets width height (gridTiles grid)
 
-gridCells :: Int -> Int -> Vector (Maybe Tile) -> Gloss.Picture
-gridCells width height tiles = Gloss.pictures pictures
+gridCells :: Assets -> Int -> Int -> Vector (Maybe Tile) -> Gloss.Picture
+gridCells assets width height tiles = Gloss.pictures pictures
   where
     (tileWidth, tileHeight) = tileSize
     position i = (i `mod` width, i `div` width)
@@ -173,17 +195,17 @@ gridCells width height tiles = Gloss.pictures pictures
       let (x, y) = position index
           dx = (fromIntegral x - fromIntegral width / 2.0 + 0.5) * tileWidth
           dy = (fromIntegral y - fromIntegral height / 2.0 + 0.5) * tileHeight
-       in Gloss.translate dx dy (tilePicture tile)
+       in Gloss.translate dx dy (tilePicture assets tile)
 
-tilePicture :: Tile -> Gloss.Picture
-tilePicture tile =
+tilePicture :: Assets -> Tile -> Gloss.Picture
+tilePicture assets tile =
   let (w, h) = tileSize
       bg = Gloss.color (Gloss.greyN 0.5) $ Gloss.rectangleSolid w h
       rotation = directionRotation (tileDirection tile)
       picture = case tileType tile of
-        Empty -> Gloss.blank
-        Straight -> Gloss.color Gloss.blue (Gloss.rectangleSolid w (h * 0.3))
-        Tri -> Gloss.color Gloss.blue (Gloss.rectangleSolid w (h * 0.3) <> Gloss.translate 0 (h * 0.25) (Gloss.rectangleSolid (w * 0.3) (h * 0.5)))
+        Empty -> assetEmpty assets
+        Straight -> assetStraight assets
+        Tri -> assetTri assets
    in bg <> Gloss.rotate rotation picture
 
 gridLines :: Int -> Int -> Gloss.Picture
