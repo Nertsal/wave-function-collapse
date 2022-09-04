@@ -7,4 +7,4 @@ lineWidth :: Float
 lineWidth = 5
 
 connectionsPerSide :: Int
-connectionsPerSide = 1
+connectionsPerSide = 3

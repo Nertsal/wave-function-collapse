@@ -34,7 +34,7 @@ getSideConnections side connections =
    in connections !! i
 
 allTileTypes :: [TileType]
-allTileTypes = [TileEmpty, TileStraight, TileTri, TileTurn]
+allTileTypes = [TileEmpty, TileStraight, TileTri, TileTurn, TileFork]
 
 allTileOrientations :: [Tile]
 allTileOrientations =

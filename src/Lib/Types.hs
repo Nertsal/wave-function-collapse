@@ -31,7 +31,7 @@ data Tile = Tile
   }
   deriving (Show, Eq)
 
-data TileType = TileEmpty | TileStraight | TileTri | TileTurn deriving (Generic, Show, Eq, Read, Aeson.FromJSON)
+data TileType = TileEmpty | TileStraight | TileTri | TileTurn | TileFork deriving (Generic, Show, Eq, Read, Aeson.FromJSON)
 
 data Direction = DirUp | DirRight | DirDown | DirLeft deriving (Show, Eq, Generic, Aeson.FromJSON)
 
