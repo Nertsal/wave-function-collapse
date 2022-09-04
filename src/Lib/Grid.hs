@@ -112,12 +112,15 @@ genNextTile assets grid autoRestart = do
           . zip [0 ..]
           . Vector.toList
           $ gridTiles grid
+  -- Auto restart when some tile has no possible generation options
   if autoRestart && not (null toGen) && (null . snd . head) toGen
     then return (newGrid (gridWidth grid) (gridHeight grid))
-    else case dropWhile (null . snd) toGen of
+    else 
+      let gen = dropWhile (null . snd) toGen
+       in case gen of
       [] -> return grid
       ((_, options) : _) -> do
-        let candidates = takeWhile ((== length options) . length . snd) toGen
+        let candidates = takeWhile ((== length options) . length . snd) gen
         i <- getRandomR (0, length candidates - 1)
         let (tileIndex, choices) = candidates !! i
         if null choices
