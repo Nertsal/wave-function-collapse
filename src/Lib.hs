@@ -22,7 +22,8 @@ data World = World
 data Assets = Assets
   { assetEmpty :: Gloss.Picture,
     assetStraight :: Gloss.Picture,
-    assetTri :: Gloss.Picture
+    assetTri :: Gloss.Picture,
+    assetTurn :: Gloss.Picture
   }
 
 initialize :: Assets -> World
@@ -48,7 +49,8 @@ loadAssets = do
   empty <- Juicy.loadJuicyPNG "static/empty.png"
   straight <- Juicy.loadJuicyPNG "static/straight.png"
   tri <- Juicy.loadJuicyPNG "static/tri.png"
-  return Assets {assetEmpty = process empty, assetStraight = process straight, assetTri = process tri}
+  turn <- Juicy.loadJuicyPNG "static/turn.png"
+  return Assets {assetEmpty = process empty, assetStraight = process straight, assetTri = process tri, assetTurn = process turn}
   where
     process :: Maybe Gloss.Picture -> Gloss.Picture
     process = Gloss.scale 4 4 . Maybe.fromJust
@@ -112,20 +114,21 @@ data Tile = Tile
 
 data Direction = Up | Right | Down | Left deriving (Show, Eq)
 
-data TileType = Empty | Straight | Tri deriving (Show, Eq)
+data TileType = Empty | Straight | Tri | Turn deriving (Show, Eq)
 
 allDirections :: [Direction]
 allDirections = [Up, Right, Down, Left]
 
 allTileTypes :: [TileType]
-allTileTypes = [Empty, Straight, Tri]
+allTileTypes = [Empty, Straight, Tri, Turn]
 
 -- | A list of tile connections in the default orientation (upwards).
 tileConnections :: [(TileType, [Direction])]
 tileConnections =
   [ (Empty, []),
     (Straight, [Right, Left]),
-    (Tri, [Up, Right, Left])
+    (Tri, [Up, Right, Left]),
+    (Turn, [Up, Left])
   ]
 
 allTileOrientations :: [Tile]
@@ -206,6 +209,7 @@ tilePicture assets tile =
         Empty -> assetEmpty assets
         Straight -> assetStraight assets
         Tri -> assetTri assets
+        Turn -> assetTurn assets
    in bg <> Gloss.rotate rotation picture
 
 gridLines :: Int -> Int -> Gloss.Picture
