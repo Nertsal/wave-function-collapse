@@ -103,25 +103,26 @@ getNeighbours index grid =
     )
     (getNeighbourIndices index grid)
 
-genNextTile :: (RandomGen g) => Assets -> Grid -> Rand g Grid
-genNextTile assets grid = do
+genNextTile :: (RandomGen g) => Assets -> Grid -> Bool -> Rand g Grid
+genNextTile assets grid autoRestart = do
   let toGen =
-        dropWhile (null . snd)
-          . sortBy (\(_, a) (_, b) -> length a `compare` length b)
+        sortBy (\(_, a) (_, b) -> length a `compare` length b)
           . map (\(i, _) -> (i, genOptions assets (getNeighbours i grid)))
           . filter (Maybe.isNothing . snd)
           . zip [0 ..]
           . Vector.toList
           $ gridTiles grid
-  case toGen of
-    [] -> return grid
-    ((_, options) : _) -> do
-      let candidates = takeWhile ((== length options) . length . snd) toGen
-      i <- getRandomR (0, length candidates - 1)
-      let (tileIndex, choices) = candidates !! i
-      if null choices
-        then return grid
-        else do
-          newTile <- uniform choices
-          let newTiles = gridTiles grid // [(tileIndex, Just newTile)]
-          return grid {gridTiles = newTiles}
+  if autoRestart && not (null toGen) && (null . snd . head) toGen
+    then return (newGrid (gridWidth grid) (gridHeight grid))
+    else case dropWhile (null . snd) toGen of
+      [] -> return grid
+      ((_, options) : _) -> do
+        let candidates = takeWhile ((== length options) . length . snd) toGen
+        i <- getRandomR (0, length candidates - 1)
+        let (tileIndex, choices) = candidates !! i
+        if null choices
+          then return grid
+          else do
+            newTile <- uniform choices
+            let newTiles = gridTiles grid // [(tileIndex, Just newTile)]
+            return grid {gridTiles = newTiles}

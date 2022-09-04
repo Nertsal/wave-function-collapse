@@ -10,6 +10,7 @@ import qualified Graphics.Gloss as Gloss
 
 data World = World
   { worldAssets :: Assets,
+    worldAutoRestart :: Bool,
     worldContinuousGen :: Bool,
     worldGrid :: Grid
   }
