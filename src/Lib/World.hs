@@ -23,7 +23,7 @@ handleEvent (Gloss.EventKey (Gloss.Char 'r') Gloss.Down _ _) world = do
 handleEvent (Gloss.EventKey (Gloss.Char 'p') Gloss.Down _ _) world = do
   return $ world {worldAutoRestart = not (worldAutoRestart world)}
 handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeyEnter) Gloss.Down _ _) world = do
-  wfc' <- Random.evalRandIO $ WFC.genNextTile (worldAssets world) (worldWFC world) False
+  wfc' <- Random.evalRandIO $ WFC.genNextTile (worldAssets world) (worldWFC world) True
   return $ world {worldWFC = wfc'}
 handleEvent _ wfc = return wfc
 

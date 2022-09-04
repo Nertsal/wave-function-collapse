@@ -18,7 +18,8 @@ newWFC (width, height) =
   WFC
     { wfcWidth = width,
       wfcHeight = height,
-      wfcTiles = Vector.replicate (width * height) Nothing
+      wfcTiles = Vector.replicate (width * height) Nothing,
+      wfcHistory = Vector.singleton HistoryEntry {entryTiles = Vector.replicate (width * height) Nothing}
     }
 
 drawWFC :: Assets -> WFC -> IO Gloss.Picture
@@ -105,27 +106,61 @@ getNeighbours index wfc =
 
 genNextTile :: (RandomGen g) => Assets -> WFC -> Bool -> Rand g WFC
 genNextTile assets wfc autoRestart = do
-  let toGen =
-        sortBy (\(_, a) (_, b) -> length a `compare` length b)
-          . map (\(i, _) -> (i, genOptions assets (getNeighbours i wfc)))
-          . filter (Maybe.isNothing . snd)
-          . zip [0 ..]
-          . Vector.toList
-          $ wfcTiles wfc
+  let toGen = generateOptions assets wfc
   -- Auto restart when some tile has no possible generation options
-  if autoRestart && not (null toGen) && (null . snd . head) toGen
-    then return (newWFC (wfcWidth wfc, wfcHeight wfc))
-    else
-      let gen = dropWhile (null . snd) toGen
-       in case gen of
-            [] -> return wfc
-            ((_, options) : _) -> do
-              let candidates = takeWhile ((== length options) . length . snd) gen
-              i <- getRandomR (0, length candidates - 1)
-              let (tileIndex, choices) = candidates !! i
-              if null choices
-                then return wfc
-                else do
-                  newTile <- uniform choices
-                  let newTiles = wfcTiles wfc // [(tileIndex, Just newTile)]
-                  return wfc {wfcTiles = newTiles}
+  if not (null toGen) && (null . snd . head) toGen
+    then if autoRestart then rollback assets wfc else return wfc
+    else applyRandomOption toGen wfc
+
+-- | Generates valid options for empty tile and sorts the resulting list.
+generateOptions :: Assets -> WFC -> [(Int, [Tile])]
+generateOptions assets wfc =
+  sortBy (\(_, a) (_, b) -> length a `compare` length b)
+    . map (\(i, _) -> (i, genOptions assets (getNeighbours i wfc)))
+    . filter (Maybe.isNothing . snd)
+    . zip [0 ..]
+    . Vector.toList
+    $ wfcTiles wfc
+
+chooseAmongBest :: (RandomGen g) => [(Int, [Tile])] -> Rand g Int
+chooseAmongBest options = do
+  let best = (length . snd . head) options
+  let candidates = takeWhile ((== best) . length . snd) options
+  getRandomR (0, length candidates - 1)
+
+-- removeOption :: [(Int, [Tile])] -> Int -> [(Int, [Tile])]
+-- removeOption options i = map (Data.Bifunctor.second (map snd . filter ((/= i) . fst) . zip [0 ..])) options
+
+-- | Picks a random choice among the ones with the lowest entropy (the number of options).
+applyRandomOption :: (RandomGen g) => [(Int, [Tile])] -> WFC -> Rand g WFC
+applyRandomOption options wfc =
+  let gen = dropWhile (null . snd) options
+   in case gen of
+        [] -> return wfc
+        _ -> do
+          i <- chooseAmongBest gen
+          let (tileIndex, choices) = gen !! i
+          if null choices
+            then return wfc
+            else do
+              newTile <- uniform choices
+              let newTiles = wfcTiles wfc // [(tileIndex, Just newTile)]
+              return
+                wfc
+                  { wfcTiles = newTiles,
+                    wfcHistory =
+                      wfcHistory wfc
+                        `Vector.snoc` HistoryEntry
+                          { entryTiles = newTiles
+                          -- entryOptions = removeOption gen i
+                          }
+                  }
+
+rollback :: (RandomGen g) => Assets -> WFC -> Rand g WFC
+rollback assets wfc =
+  let entry = Vector.last (wfcHistory wfc)
+      wfc' = wfc {wfcTiles = entryTiles entry, wfcHistory = Vector.init (wfcHistory wfc)}
+      toGen = generateOptions assets wfc'
+   in if not (null toGen) && (null . snd . head) toGen
+        then rollback assets wfc'
+        else applyRandomOption toGen wfc'

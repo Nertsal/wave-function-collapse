@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Lib.Types (World (..), Assets (..), WFC (..), Tile (..), TileType, Direction (..), Connection) where
+module Lib.Types (World (..), Assets (..), WFC (..), HistoryEntry (..), Tile (..), TileType, Direction (..), Connection) where
 
 import qualified Data.Aeson as Aeson
 import Data.Vector (Vector)
@@ -20,10 +20,17 @@ data Assets = Assets
     assetTileConnections :: [(TileType, [[Connection]])]
   }
 
+-- | Wave Function Collapse
 data WFC = WFC
   { wfcWidth :: Int,
     wfcHeight :: Int,
-    wfcTiles :: Vector (Maybe Tile)
+    wfcTiles :: Vector (Maybe Tile),
+    -- | A history of every step. Used when backtracking
+    wfcHistory :: Vector HistoryEntry
+  }
+
+newtype HistoryEntry = HistoryEntry
+  { entryTiles :: Vector (Maybe Tile)
   }
 
 data Tile = Tile
