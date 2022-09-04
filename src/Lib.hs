@@ -1,17 +1,24 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TupleSections #-}
 
 module Lib (run) where
 
 import Control.Monad.Random (MonadRandom (getRandomR), Rand, RandomGen, uniform)
 import qualified Control.Monad.Random as Random
+import qualified Data.Aeson as Aeson
+import qualified Data.Bifunctor
+import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString.Lazy.Char8 as BSChar8
 import Data.List (intersect, sortBy)
 import qualified Data.Maybe as Maybe
 import Data.Vector (Vector, (!), (//))
 import qualified Data.Vector as Vector
+import GHC.Generics
 import qualified Graphics.Gloss as Gloss
 import qualified Graphics.Gloss.Interface.IO.Game as Gloss
 import qualified Graphics.Gloss.Juicy as Juicy
-import Prelude hiding (Left, Right)
+import qualified System.Exit
 
 data World = World
   { worldAssets :: Assets,
@@ -20,10 +27,8 @@ data World = World
   }
 
 data Assets = Assets
-  { assetEmpty :: Gloss.Picture,
-    assetStraight :: Gloss.Picture,
-    assetTri :: Gloss.Picture,
-    assetTurn :: Gloss.Picture
+  { assetTiles :: [(TileType, Gloss.Picture)],
+    assetTileConnections :: [(TileType, [Direction])]
   }
 
 initialize :: Assets -> World
@@ -44,20 +49,34 @@ run = do
     display = Gloss.FullScreen
     background = Gloss.black
 
+data TileAsset = TileAsset
+  { tilePath :: FilePath,
+    tileConnections :: [Direction]
+  }
+  deriving (Generic, Show, Aeson.FromJSON)
+
 loadAssets :: IO Assets
 loadAssets = do
-  empty <- Juicy.loadJuicyPNG "static/empty.png"
-  straight <- Juicy.loadJuicyPNG "static/straight.png"
-  tri <- Juicy.loadJuicyPNG "static/tri.png"
-  turn <- Juicy.loadJuicyPNG "static/turn.png"
-  return Assets {assetEmpty = process empty, assetStraight = process straight, assetTri = process tri, assetTurn = process turn}
+  contents <- BS.readFile "static/tiles.json"
+  let result = Aeson.eitherDecode contents :: Either String [(TileType, TileAsset)]
+  case result of
+    Left err -> System.Exit.die err
+    Right tileAssets -> do
+      tiles <- mapM (\(tile, asset) -> do picture <- loadTilePicture asset; return (tile, picture)) tileAssets
+      let connections = map (Data.Bifunctor.second tileConnections) tileAssets
+      return Assets {assetTiles = tiles, assetTileConnections = connections}
   where
     process :: Maybe Gloss.Picture -> Gloss.Picture
     process = Gloss.scale 4 4 . Maybe.fromJust
 
+    loadTilePicture :: TileAsset -> IO Gloss.Picture
+    loadTilePicture asset = do
+      picture <- Juicy.loadJuicyPNG (tilePath asset)
+      return (process picture)
+
 -- | Returns a dictionary of matching tiles for each side of a tile.
-tileMatches :: TileType -> [(Direction, [Tile])]
-tileMatches tile = matchingTiles . Maybe.fromJust $ tile `lookup` tileConnections
+tileMatches :: Assets -> TileType -> [(Direction, [Tile])]
+tileMatches assets tile = matchingTiles . Maybe.fromJust $ tile `lookup` assetTileConnections assets
   where
     matchingTiles :: [Direction] -> [(Direction, [Tile])]
     matchingTiles connections = map (matchConnection . (\dir -> (dir, dir `elem` connections))) allDirections
@@ -70,7 +89,7 @@ tileMatches tile = matchingTiles . Maybe.fromJust $ tile `lookup` tileConnection
            in isConnected
                 == ( elem dir
                        . Maybe.fromJust
-                       $ (tileType tile' `lookup` tileConnections)
+                       $ (tileType tile' `lookup` assetTileConnections assets)
                    )
 
 handleEvent :: Gloss.Event -> World -> IO World
@@ -79,7 +98,7 @@ handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeySpace) _ _ _) world = do
 handleEvent (Gloss.EventKey (Gloss.Char 'r') Gloss.Down _ _) world = do
   return $ world {worldGrid = newGrid 10 10}
 handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeyEnter) Gloss.Down _ _) world = do
-  grid' <- Random.evalRandIO $ genNextTile (worldGrid world)
+  grid' <- Random.evalRandIO $ genNextTile (worldAssets world) (worldGrid world)
   return $ world {worldGrid = grid'}
 handleEvent _ grid = return grid
 
@@ -87,7 +106,7 @@ updateWorld :: Float -> World -> IO World
 updateWorld _ world =
   if worldContinuousGen world
     then do
-      grid' <- Random.evalRandIO $ genNextTile (worldGrid world)
+      grid' <- Random.evalRandIO $ genNextTile (worldAssets world) (worldGrid world)
       return $ world {worldGrid = grid'}
     else return world
 
@@ -112,24 +131,15 @@ data Tile = Tile
   }
   deriving (Show, Eq)
 
-data Direction = Up | Right | Down | Left deriving (Show, Eq)
+data Direction = DirUp | DirRight | DirDown | DirLeft deriving (Show, Eq, Generic, Aeson.FromJSON)
 
-data TileType = Empty | Straight | Tri | Turn deriving (Show, Eq)
+data TileType = TileEmpty | TileStraight | TileTri | TileTurn deriving (Generic, Show, Eq, Read, Aeson.FromJSON)
 
 allDirections :: [Direction]
-allDirections = [Up, Right, Down, Left]
+allDirections = [DirUp, DirRight, DirDown, DirLeft]
 
 allTileTypes :: [TileType]
-allTileTypes = [Empty, Straight, Tri, Turn]
-
--- | A list of tile connections in the default orientation (upwards).
-tileConnections :: [(TileType, [Direction])]
-tileConnections =
-  [ (Empty, []),
-    (Straight, [Right, Left]),
-    (Tri, [Up, Right, Left]),
-    (Turn, [Up, Left])
-  ]
+allTileTypes = [TileEmpty, TileStraight, TileTri, TileTurn]
 
 allTileOrientations :: [Tile]
 allTileOrientations =
@@ -140,36 +150,36 @@ allTileOrientations =
     allTileTypes
 
 directionRotation :: Direction -> Float
-directionRotation Up = 0
-directionRotation Right = 90
-directionRotation Down = 180
-directionRotation Left = 270
+directionRotation DirUp = 0
+directionRotation DirRight = 90
+directionRotation DirDown = 180
+directionRotation DirLeft = 270
 
 oppositeDirection :: Direction -> Direction
-oppositeDirection Up = Down
-oppositeDirection Right = Left
-oppositeDirection Down = Up
-oppositeDirection Left = Right
+oppositeDirection DirUp = DirDown
+oppositeDirection DirRight = DirLeft
+oppositeDirection DirDown = DirUp
+oppositeDirection DirLeft = DirRight
 
 negativeDirection :: Direction -> Direction
-negativeDirection Up = Up
-negativeDirection Right = Left
-negativeDirection Down = Down
-negativeDirection Left = Right
+negativeDirection DirUp = DirUp
+negativeDirection DirRight = DirLeft
+negativeDirection DirDown = DirDown
+negativeDirection DirLeft = DirRight
 
 rotateDirection :: Direction -> Direction -> Direction
 rotateDirection a b = getRotation ((rotationIndex a + rotationIndex b :: Int) `mod` 4)
   where
     rotationIndex dir = case dir of
-      Up -> 0
-      Right -> 1
-      Down -> 2
-      Left -> 3
+      DirUp -> 0
+      DirRight -> 1
+      DirDown -> 2
+      DirLeft -> 3
     getRotation index = case index of
-      0 -> Up
-      1 -> Right
-      2 -> Down
-      3 -> Left
+      0 -> DirUp
+      1 -> DirRight
+      2 -> DirDown
+      3 -> DirLeft
       _ -> undefined
 
 newGrid :: Int -> Int -> Grid
@@ -205,11 +215,7 @@ tilePicture assets tile =
   let (w, h) = tileSize
       bg = Gloss.color (Gloss.greyN 0.5) $ Gloss.rectangleSolid w h
       rotation = directionRotation (tileDirection tile)
-      picture = case tileType tile of
-        Empty -> assetEmpty assets
-        Straight -> assetStraight assets
-        Tri -> assetTri assets
-        Turn -> assetTurn assets
+      picture = Maybe.fromJust (tileType tile `lookup` assetTiles assets)
    in bg <> Gloss.rotate rotation picture
 
 gridLines :: Int -> Int -> Gloss.Picture
@@ -224,8 +230,8 @@ gridLines width height =
     column x = Gloss.translate ((fromIntegral x - w / 2.0) * tileWidth) 0 $ Gloss.rectangleSolid lineWidth (h * tileHeight)
     row y = Gloss.translate 0 ((fromIntegral y - h / 2.0) * tileHeight) $ Gloss.rectangleSolid (w * tileWidth) lineWidth
 
-genOptions :: [(Direction, Tile)] -> [Tile]
-genOptions neighbours =
+genOptions :: Assets -> [(Direction, Tile)] -> [Tile]
+genOptions assets neighbours =
   foldl
     intersect
     allTileOrientations
@@ -235,7 +241,7 @@ genOptions neighbours =
               (\newTile -> newTile {tileDirection = rotateDirection (tileDirection newTile) (tileDirection tile)})
               ( Maybe.fromJust
                   ( let direction = rotateDirection (negativeDirection (tileDirection tile)) (oppositeDirection dir)
-                     in direction `lookup` tileMatches (tileType tile)
+                     in direction `lookup` tileMatches assets (tileType tile)
                   )
               )
         )
@@ -252,7 +258,7 @@ getNeighbourIndices :: Int -> Grid -> [(Direction, Int)]
 getNeighbourIndices index grid =
   map (\(dir, x, y) -> (dir, x + y * width))
     . filter (\(_, x, y) -> inBounds x y grid)
-    $ [(Up, tileX, tileY + 1), (Right, tileX + 1, tileY), (Down, tileX, tileY - 1), (Left, tileX - 1, tileY)]
+    $ [(DirUp, tileX, tileY + 1), (DirRight, tileX + 1, tileY), (DirDown, tileX, tileY - 1), (DirLeft, tileX - 1, tileY)]
   where
     width = gridWidth grid
     tileX = index `mod` width
@@ -266,12 +272,12 @@ getNeighbours index grid =
     )
     (getNeighbourIndices index grid)
 
-genNextTile :: (RandomGen g) => Grid -> Rand g Grid
-genNextTile grid = do
+genNextTile :: (RandomGen g) => Assets -> Grid -> Rand g Grid
+genNextTile assets grid = do
   let toGen =
         dropWhile (null . snd)
           . sortBy (\(_, a) (_, b) -> length a `compare` length b)
-          . map (\(i, _) -> (i, genOptions $ getNeighbours i grid))
+          . map (\(i, _) -> (i, genOptions assets (getNeighbours i grid)))
           . filter (Maybe.isNothing . snd)
           . zip [0 ..]
           . Vector.toList

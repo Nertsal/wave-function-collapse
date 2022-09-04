@@ -33,7 +33,10 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       MonadRandom ==0.1.*
+    , aeson ==1.5.*
     , base >=4.7 && <5
+    , bytestring ==0.10.*
+    , containers ==0.6.*
     , gloss ==1.13.*
     , gloss-juicy ==0.2.*
     , vector ==0.12.*
@@ -48,7 +51,10 @@ executable wave-function-collapse-hs-exe
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       MonadRandom ==0.1.*
+    , aeson ==1.5.*
     , base >=4.7 && <5
+    , bytestring ==0.10.*
+    , containers ==0.6.*
     , gloss ==1.13.*
     , gloss-juicy ==0.2.*
     , vector ==0.12.*
@@ -65,7 +71,10 @@ test-suite wave-function-collapse-hs-test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       MonadRandom ==0.1.*
+    , aeson ==1.5.*
     , base >=4.7 && <5
+    , bytestring ==0.10.*
+    , containers ==0.6.*
     , gloss ==1.13.*
     , gloss-juicy ==0.2.*
     , vector ==0.12.*

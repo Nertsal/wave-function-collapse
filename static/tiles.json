@@ -1,0 +1,30 @@
+[
+  [
+    "TileEmpty",
+    {
+      "tilePath": "static/empty.png",
+      "tileConnections": []
+    }
+  ],
+  [
+    "TileStraight",
+    {
+      "tilePath": "static/straight.png",
+      "tileConnections": ["DirRight", "DirLeft"]
+    }
+  ],
+  [
+    "TileTri",
+    {
+      "tilePath": "static/tri.png",
+      "tileConnections": ["DirUp", "DirRight", "DirLeft"]
+    }
+  ],
+  [
+    "TileTurn",
+    {
+      "tilePath": "static/turn.png",
+      "tileConnections": ["DirUp", "DirLeft"]
+    }
+  ]
+]
