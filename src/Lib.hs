@@ -35,8 +35,8 @@ run = Gloss.playIO display background fps initialWorld renderWorld handleEvent u
 tileMatches :: TileType -> [(Direction, [Tile])]
 tileMatches tile = matchingTiles . Maybe.fromJust $ tile `lookup` tileConnections
   where
-    matchingTiles :: [(Direction, Bool)] -> [(Direction, [Tile])]
-    matchingTiles = map matchConnection
+    matchingTiles :: [Direction] -> [(Direction, [Tile])]
+    matchingTiles connections = map (matchConnection . (\dir -> (dir, dir `elem` connections))) allDirections
 
     matchConnection :: (Direction, Bool) -> (Direction, [Tile])
     matchConnection (direction, isConnected) = (direction, filter checkTile allTileOrientations)
@@ -44,8 +44,7 @@ tileMatches tile = matchingTiles . Maybe.fromJust $ tile `lookup` tileConnection
         checkTile tile' =
           let dir = rotateDirection (negativeDirection (tileDirection tile')) (oppositeDirection direction)
            in isConnected
-                == ( Maybe.fromJust
-                       . lookup dir
+                == ( elem dir
                        . Maybe.fromJust
                        $ (tileType tile' `lookup` tileConnections)
                    )
@@ -99,30 +98,12 @@ allDirections = [Up, Right, Down, Left]
 allTileTypes :: [TileType]
 allTileTypes = [Empty, Straight, Tri]
 
--- | A dictionary of tile connections if the default orientation (upwards).
-tileConnections :: [(TileType, [(Direction, Bool)])]
+-- | A list of tile connections in the default orientation (upwards).
+tileConnections :: [(TileType, [Direction])]
 tileConnections =
-  [ ( Empty,
-      [ (Up, False),
-        (Right, False),
-        (Down, False),
-        (Left, False)
-      ]
-    ),
-    ( Straight,
-      [ (Up, False),
-        (Right, True),
-        (Down, False),
-        (Left, True)
-      ]
-    ),
-    ( Tri,
-      [ (Up, True),
-        (Right, True),
-        (Down, False),
-        (Left, True)
-      ]
-    )
+  [ (Empty, []),
+    (Straight, [Right, Left]),
+    (Tri, [Up, Right, Left])
   ]
 
 allTileOrientations :: [Tile]
