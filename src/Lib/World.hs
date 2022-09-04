@@ -2,9 +2,9 @@ module Lib.World (initialize, handleEvent, updateWorld, renderWorld) where
 
 import qualified Control.Monad.Random as Random
 import qualified Graphics.Gloss.Interface.IO.Game as Gloss
-import qualified Lib.Grid as Grid
-import Lib.Types
 import qualified Lib.Constants as Constants
+import Lib.Types
+import qualified Lib.WFC as WFC
 
 initialize :: Assets -> World
 initialize assets =
@@ -12,28 +12,28 @@ initialize assets =
     { worldAssets = assets,
       worldAutoRestart = False,
       worldContinuousGen = False,
-      worldGrid = Grid.newGrid Constants.worldSize
+      worldWFC = WFC.newWFC Constants.worldSize
     }
 
 handleEvent :: Gloss.Event -> World -> IO World
 handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeySpace) _ _ _) world = do
   return $ world {worldContinuousGen = not (worldContinuousGen world)}
 handleEvent (Gloss.EventKey (Gloss.Char 'r') Gloss.Down _ _) world = do
-  return $ world {worldGrid = Grid.newGrid Constants.worldSize}
+  return $ world {worldWFC = WFC.newWFC Constants.worldSize}
 handleEvent (Gloss.EventKey (Gloss.Char 'p') Gloss.Down _ _) world = do
   return $ world {worldAutoRestart = not (worldAutoRestart world)}
 handleEvent (Gloss.EventKey (Gloss.SpecialKey Gloss.KeyEnter) Gloss.Down _ _) world = do
-  grid' <- Random.evalRandIO $ Grid.genNextTile (worldAssets world) (worldGrid world) False
-  return $ world {worldGrid = grid'}
-handleEvent _ grid = return grid
+  wfc' <- Random.evalRandIO $ WFC.genNextTile (worldAssets world) (worldWFC world) False
+  return $ world {worldWFC = wfc'}
+handleEvent _ wfc = return wfc
 
 updateWorld :: Float -> World -> IO World
 updateWorld _ world =
   if worldContinuousGen world || worldAutoRestart world
     then do
-      grid' <- Random.evalRandIO $ Grid.genNextTile (worldAssets world) (worldGrid world) (worldAutoRestart world)
-      return $ world {worldGrid = grid'}
+      wfc' <- Random.evalRandIO $ WFC.genNextTile (worldAssets world) (worldWFC world) (worldAutoRestart world)
+      return $ world {worldWFC = wfc'}
     else return world
 
 renderWorld :: World -> IO Gloss.Picture
-renderWorld world = Grid.drawGrid (worldAssets world) (worldGrid world)
+renderWorld world = WFC.drawWFC (worldAssets world) (worldWFC world)

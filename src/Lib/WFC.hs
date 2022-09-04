@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module Lib.Grid (newGrid, drawGrid, genNextTile) where
+module Lib.WFC (newWFC, drawWFC, genNextTile) where
 
 import Control.Monad.Random (Rand, RandomGen, getRandomR, uniform)
 import Data.List (intersect, sortBy)
@@ -13,22 +13,22 @@ import qualified Lib.Direction as Direction
 import qualified Lib.Tile as Tile
 import Lib.Types
 
-newGrid :: (Int, Int) -> Grid
-newGrid (width, height) =
-  Grid
-    { gridWidth = width,
-      gridHeight = height,
-      gridTiles = Vector.replicate (width * height) Nothing
+newWFC :: (Int, Int) -> WFC
+newWFC (width, height) =
+  WFC
+    { wfcWidth = width,
+      wfcHeight = height,
+      wfcTiles = Vector.replicate (width * height) Nothing
     }
 
-drawGrid :: Assets -> Grid -> IO Gloss.Picture
-drawGrid assets grid = do
-  let width = gridWidth grid
-      height = gridHeight grid
-  return $ gridLines width height <> gridCells assets width height (gridTiles grid)
+drawWFC :: Assets -> WFC -> IO Gloss.Picture
+drawWFC assets wfc = do
+  let width = wfcWidth wfc
+      height = wfcHeight wfc
+  return $ wfcLines width height <> wfcCells assets width height (wfcTiles wfc)
 
-gridCells :: Assets -> Int -> Int -> Vector (Maybe Tile) -> Gloss.Picture
-gridCells assets width height tiles = Gloss.pictures pictures
+wfcCells :: Assets -> Int -> Int -> Vector (Maybe Tile) -> Gloss.Picture
+wfcCells assets width height tiles = Gloss.pictures pictures
   where
     (tileWidth, tileHeight) = Constants.tileSize
     position i = (i `mod` width, i `div` width)
@@ -49,8 +49,8 @@ tilePicture assets tile =
       picture = Maybe.fromJust (tileType tile `lookup` assetTiles assets)
    in bg <> Gloss.rotate rotation picture
 
-gridLines :: Int -> Int -> Gloss.Picture
-gridLines width height =
+wfcLines :: Int -> Int -> Gloss.Picture
+wfcLines width height =
   Gloss.color (Gloss.greyN 0.5)
     . Gloss.pictures
     $ map column [0 .. width] ++ map row [0 .. height]
@@ -79,53 +79,53 @@ genOptions assets neighbours =
         neighbours
     )
 
-inBounds :: Int -> Int -> Grid -> Bool
-inBounds x y grid = x >= 0 && x < width && y >= 0 && y < height
+inBounds :: Int -> Int -> WFC -> Bool
+inBounds x y wfc = x >= 0 && x < width && y >= 0 && y < height
   where
-    width = gridWidth grid
-    height = gridHeight grid
+    width = wfcWidth wfc
+    height = wfcHeight wfc
 
-getNeighbourIndices :: Int -> Grid -> [(Direction, Int)]
-getNeighbourIndices index grid =
+getNeighbourIndices :: Int -> WFC -> [(Direction, Int)]
+getNeighbourIndices index wfc =
   map (\(dir, x, y) -> (dir, x + y * width))
-    . filter (\(_, x, y) -> inBounds x y grid)
+    . filter (\(_, x, y) -> inBounds x y wfc)
     $ [(DirUp, tileX, tileY + 1), (DirRight, tileX + 1, tileY), (DirDown, tileX, tileY - 1), (DirLeft, tileX - 1, tileY)]
   where
-    width = gridWidth grid
+    width = wfcWidth wfc
     tileX = index `mod` width
     tileY = index `div` width
 
-getNeighbours :: Int -> Grid -> [(Direction, Tile)]
-getNeighbours index grid =
+getNeighbours :: Int -> WFC -> [(Direction, Tile)]
+getNeighbours index wfc =
   Maybe.mapMaybe
     ( \(dir, i) ->
-        fmap (dir,) (gridTiles grid ! i)
+        fmap (dir,) (wfcTiles wfc ! i)
     )
-    (getNeighbourIndices index grid)
+    (getNeighbourIndices index wfc)
 
-genNextTile :: (RandomGen g) => Assets -> Grid -> Bool -> Rand g Grid
-genNextTile assets grid autoRestart = do
+genNextTile :: (RandomGen g) => Assets -> WFC -> Bool -> Rand g WFC
+genNextTile assets wfc autoRestart = do
   let toGen =
         sortBy (\(_, a) (_, b) -> length a `compare` length b)
-          . map (\(i, _) -> (i, genOptions assets (getNeighbours i grid)))
+          . map (\(i, _) -> (i, genOptions assets (getNeighbours i wfc)))
           . filter (Maybe.isNothing . snd)
           . zip [0 ..]
           . Vector.toList
-          $ gridTiles grid
+          $ wfcTiles wfc
   -- Auto restart when some tile has no possible generation options
   if autoRestart && not (null toGen) && (null . snd . head) toGen
-    then return (newGrid (gridWidth grid, gridHeight grid))
+    then return (newWFC (wfcWidth wfc, wfcHeight wfc))
     else
       let gen = dropWhile (null . snd) toGen
        in case gen of
-            [] -> return grid
+            [] -> return wfc
             ((_, options) : _) -> do
               let candidates = takeWhile ((== length options) . length . snd) gen
               i <- getRandomR (0, length candidates - 1)
               let (tileIndex, choices) = candidates !! i
               if null choices
-                then return grid
+                then return wfc
                 else do
                   newTile <- uniform choices
-                  let newTiles = gridTiles grid // [(tileIndex, Just newTile)]
-                  return grid {gridTiles = newTiles}
+                  let newTiles = wfcTiles wfc // [(tileIndex, Just newTile)]
+                  return wfc {wfcTiles = newTiles}

@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Lib.Types (World (..), Assets (..), Grid (..), Tile (..), TileType, Direction (..), Connection) where
+module Lib.Types (World (..), Assets (..), WFC (..), Tile (..), TileType, Direction (..), Connection) where
 
 import qualified Data.Aeson as Aeson
 import Data.Vector (Vector)
@@ -12,7 +12,7 @@ data World = World
   { worldAssets :: Assets,
     worldAutoRestart :: Bool,
     worldContinuousGen :: Bool,
-    worldGrid :: Grid
+    worldWFC :: WFC
   }
 
 data Assets = Assets
@@ -20,10 +20,10 @@ data Assets = Assets
     assetTileConnections :: [(TileType, [[Connection]])]
   }
 
-data Grid = Grid
-  { gridWidth :: Int,
-    gridHeight :: Int,
-    gridTiles :: Vector (Maybe Tile)
+data WFC = WFC
+  { wfcWidth :: Int,
+    wfcHeight :: Int,
+    wfcTiles :: Vector (Maybe Tile)
   }
 
 data Tile = Tile
