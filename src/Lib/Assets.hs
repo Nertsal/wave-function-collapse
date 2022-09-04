@@ -32,7 +32,13 @@ loadAssets = do
       return Assets {assetTiles = tiles, assetTileConnections = connections}
   where
     process :: Maybe Gloss.Picture -> Gloss.Picture
-    process = Gloss.scale 4.5 4.5 . Maybe.fromJust
+    process picture = case Maybe.fromJust picture of
+      pic@(Gloss.Bitmap bitmap) ->
+        let (w, h) = Gloss.bitmapSize bitmap
+            (tx, ty) = Constants.tileSize
+            (x, y) = (tx / fromIntegral w, ty / fromIntegral h)
+         in Gloss.scale x y pic
+      pic -> pic
 
     loadTilePicture :: TileAsset -> IO Gloss.Picture
     loadTilePicture asset = do

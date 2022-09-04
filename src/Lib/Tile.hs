@@ -10,10 +10,7 @@ tileMatches assets tile = matchingTiles assets . Maybe.fromJust $ tile `lookup` 
 
 -- | Given a list of connections of a tile, returns a list of matching tiles for every side.
 matchingTiles :: Assets -> [[Connection]] -> [(Direction, [Tile])]
-matchingTiles assets connections =
-  map
-    (matchConnection assets . (\dir -> (dir, getSideConnections dir connections)))
-    Direction.allDirections
+matchingTiles assets = zipWith (curry (matchConnection assets)) Direction.allDirections
 
 -- | Given a list of connections for a single side, returns a list of matching tiles for that side.
 matchConnection :: Assets -> (Direction, [Connection]) -> (Direction, [Tile])
@@ -21,7 +18,7 @@ matchConnection assets (direction, connections) = (direction, filter checkTile (
   where
     checkTile tile =
       let dir = Direction.rotate (Direction.negative (tileDirection tile)) (Direction.opposite direction)
-       in connections
+       in reverse connections
             == ( getSideConnections dir
                    . Maybe.fromJust
                    $ (tileType tile `lookup` assetTileConnections assets)

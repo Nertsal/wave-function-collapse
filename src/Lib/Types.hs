@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Lib.Types (World (..), Assets (..), Grid (..), Tile (..), TileType, Direction (..), Connection, ConnectionType) where
+module Lib.Types (World (..), Assets (..), Grid (..), Tile (..), TileType, Direction (..), Connection) where
 
 import qualified Data.Aeson as Aeson
 import Data.Vector (Vector)
@@ -35,6 +35,4 @@ type TileType = String
 
 data Direction = DirUp | DirRight | DirDown | DirLeft deriving (Show, Eq, Generic, Aeson.FromJSON)
 
-type Connection = Maybe ConnectionType
-
-type ConnectionType = String
+type Connection = Int
