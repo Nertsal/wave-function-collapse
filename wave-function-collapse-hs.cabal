@@ -26,6 +26,13 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Lib.Assets
+      Lib.Constants
+      Lib.Direction
+      Lib.Grid
+      Lib.Tile
+      Lib.Types
+      Lib.World
   other-modules:
       Paths_wave_function_collapse_hs
   hs-source-dirs:
