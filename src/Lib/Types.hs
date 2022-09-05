@@ -44,4 +44,4 @@ type TileType = String
 
 data Direction = DirUp | DirRight | DirDown | DirLeft deriving (Show, Eq, Generic, Aeson.FromJSON)
 
-type Connection = Int
+type Connection = Char
