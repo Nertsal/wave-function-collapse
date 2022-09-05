@@ -123,11 +123,16 @@ generateOptions assets wfc =
     . Vector.toList
     $ wfcTiles wfc
 
-chooseAmongBest :: (RandomGen g) => [(Int, [Tile])] -> Rand g Int
-chooseAmongBest options = do
-  let best = (length . snd . head) options
-  let candidates = takeWhile ((== best) . length . snd) options
-  getRandomR (0, length candidates - 1)
+-- | Keeps the front elements with equal "value".
+keepFront :: [(b, [a])] -> [(b, [a])]
+keepFront [] = []
+keepFront (x : xs) =
+  let f = length . snd
+      best = f x
+   in takeWhile ((== best) . f) (x : xs)
+
+chooseIndex :: (RandomGen g, Foldable t) => t a -> Rand g Int
+chooseIndex options = getRandomR (0, length options - 1)
 
 removeOption :: [(Int, [Tile])] -> Int -> [(Int, [Tile])]
 removeOption options i = map (Data.Bifunctor.second (map snd . filter ((/= i) . fst) . zip [0 ..])) options
@@ -135,11 +140,11 @@ removeOption options i = map (Data.Bifunctor.second (map snd . filter ((/= i) . 
 -- | Picks a random choice among the ones with the lowest entropy (the number of options).
 applyRandomOption :: (RandomGen g) => [(Int, [Tile])] -> WFC -> Rand g WFC
 applyRandomOption options wfc =
-  let gen = dropWhile (null . snd) options
+  let gen = keepFront $ dropWhile (null . snd) options
    in case gen of
         [] -> return wfc
         _ -> do
-          i <- chooseAmongBest gen
+          i <- chooseIndex gen
           let (tileIndex, choices) = gen !! i
           if null choices
             then return wfc -- A safety check that is repeated (from rollback and genNextTile) just in case
