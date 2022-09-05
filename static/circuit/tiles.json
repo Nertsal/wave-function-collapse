@@ -1,0 +1,54 @@
+[
+  {
+    "tilePath": "0.png",
+    "tileConnections": [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]
+  },
+  {
+    "tilePath": "1.png",
+    "tileConnections": [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
+  },
+  {
+    "tilePath": "2.png",
+    "tileConnections": [[1, 1, 1], [1, 2, 1], [1, 1, 1], [1, 1, 1]]
+  },
+  {
+    "tilePath": "3.png",
+    "tileConnections": [[1, 1, 1], [1, 3, 1], [1, 1, 1], [1, 3, 1]]
+  },
+  {
+    "tilePath": "4.png",
+    "tileConnections": [[0, 1, 1], [1, 2, 1], [1, 1, 0], [0, 0, 0]]
+  },
+  {
+    "tilePath": "5.png",
+    "tileConnections": [[0, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 0]]
+  },
+  {
+    "tilePath": "6.png",
+    "tileConnections": [[1, 1, 1], [1, 2, 1], [1, 1, 1], [1, 2, 1]]
+  },
+  {
+    "tilePath": "7.png",
+    "tileConnections": [[1, 3, 1], [1, 2, 1], [1, 3, 1], [1, 2, 1]]
+  },
+  {
+    "tilePath": "8.png",
+    "tileConnections": [[1, 3, 1], [1, 1, 1], [1, 2, 1], [1, 1, 1]]
+  },
+  {
+    "tilePath": "9.png",
+    "tileConnections": [[1, 2, 1], [1, 2, 1], [1, 1, 1], [1, 2, 1]]
+  },
+  {
+    "tilePath": "10.png",
+    "tileConnections": [[1, 2, 1], [1, 2, 1], [1, 2, 1], [1, 2, 1]]
+  },
+  {
+    "tilePath": "11.png",
+    "tileConnections": [[1, 2, 1], [1, 2, 1], [1, 1, 1], [1, 1, 1]]
+  },
+  {
+    "tilePath": "12.png",
+    "tileConnections": [[1, 1, 1], [1, 2, 1], [1, 1, 1], [1, 2, 1]]
+  }
+]

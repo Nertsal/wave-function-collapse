@@ -1,0 +1,18 @@
+[
+  {
+    "tilePath": "empty.png",
+    "tileConnections": [[0], [0], [0], [0]]
+  },
+  {
+    "tilePath": "straight.png",
+    "tileConnections": [[0], [1], [0], [1]]
+  },
+  {
+    "tilePath": "tri.png",
+    "tileConnections": [[1], [1], [0], [1]]
+  },
+  {
+    "tilePath": "turn.png",
+    "tileConnections": [[1], [0], [0], [1]]
+  }
+]

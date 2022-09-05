@@ -44,6 +44,7 @@ library
     , base >=4.7 && <5
     , bytestring ==0.10.*
     , containers ==0.6.*
+    , filepath ==1.4.*
     , gloss ==1.13.*
     , gloss-juicy ==0.2.*
     , vector ==0.12.*
@@ -62,6 +63,7 @@ executable wave-function-collapse-hs-exe
     , base >=4.7 && <5
     , bytestring ==0.10.*
     , containers ==0.6.*
+    , filepath ==1.4.*
     , gloss ==1.13.*
     , gloss-juicy ==0.2.*
     , vector ==0.12.*
@@ -82,6 +84,7 @@ test-suite wave-function-collapse-hs-test
     , base >=4.7 && <5
     , bytestring ==0.10.*
     , containers ==0.6.*
+    , filepath ==1.4.*
     , gloss ==1.13.*
     , gloss-juicy ==0.2.*
     , vector ==0.12.*

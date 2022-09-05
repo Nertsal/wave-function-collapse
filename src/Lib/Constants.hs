@@ -1,4 +1,4 @@
-module Lib.Constants (worldSize, tileSize, lineWidth, connectionsPerSide) where
+module Lib.Constants (worldSize, tileSize, lineWidth) where
 
 worldSize :: (Int, Int)
 worldSize = (50, 50)
@@ -8,6 +8,3 @@ tileSize = (20, 20)
 
 lineWidth :: Float
 lineWidth = 2
-
-connectionsPerSide :: Int
-connectionsPerSide = 3
