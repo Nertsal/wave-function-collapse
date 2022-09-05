@@ -124,43 +124,54 @@ generateOptions assets wfc =
     $ wfcTiles wfc
 
 -- | Keeps the front elements with equal "value".
-keepFront :: [(b, [a])] -> [(b, [a])]
+keepFront :: (Foldable t) => [(b, t a)] -> [(b, t a)]
 keepFront [] = []
 keepFront (x : xs) =
   let f = length . snd
       best = f x
    in takeWhile ((== best) . f) (x : xs)
 
-chooseIndex :: (RandomGen g, Foldable t) => t a -> Rand g Int
-chooseIndex options = getRandomR (0, length options - 1)
+chooseIndex :: (RandomGen g, Foldable t) => t a -> Rand g (Maybe Int)
+chooseIndex options =
+  if null options
+    then return Nothing
+    else do
+      i <- getRandomR (0, length options - 1)
+      return (Just i)
 
 removeOption :: [(Int, [Tile])] -> Int -> [(Int, [Tile])]
 removeOption options i = map (Data.Bifunctor.second (map snd . filter ((/= i) . fst) . zip [0 ..])) options
 
 -- | Picks a random choice among the ones with the lowest entropy (the number of options).
 applyRandomOption :: (RandomGen g) => [(Int, [Tile])] -> WFC -> Rand g WFC
-applyRandomOption options wfc =
+applyRandomOption options wfc = do
   let gen = keepFront $ dropWhile (null . snd) options
-   in case gen of
-        [] -> return wfc
-        _ -> do
-          i <- chooseIndex gen
-          let (tileIndex, choices) = gen !! i
-          if null choices
-            then return wfc -- A safety check that is repeated (from rollback and genNextTile) just in case
-            else do
-              newTile <- uniform choices
-              let newTiles = wfcTiles wfc // [(tileIndex, Just newTile)]
-              return
-                wfc
-                  { wfcTiles = newTiles,
-                    wfcHistory =
-                      wfcHistory wfc
-                        `Vector.snoc` HistoryEntry
-                          { entryTiles = wfcTiles wfc,
-                            entryOptions = removeOption gen i
-                          }
-                  }
+  index <- chooseIndex gen
+  case index of
+    Nothing -> return wfc
+    Just i -> applyOption (gen !! i) (removeOption gen i) wfc
+
+-- | Applies the given option.
+applyOption :: (RandomGen g) => (Int, [Tile]) -> [(Int, [Tile])] -> WFC -> Rand g WFC
+applyOption (tileIndex, choices) otherOptions wfc =
+  if null choices
+    then return wfc
+    else fmap (updateTile tileIndex otherOptions wfc) (uniform choices)
+
+-- | Updates the tile and adds a new history entry.
+updateTile :: Int -> [(Int, [Tile])] -> WFC -> Tile -> WFC
+updateTile tileIndex otherOptions wfc newTile =
+  let newTiles = wfcTiles wfc // [(tileIndex, Just newTile)]
+      entry =
+        HistoryEntry
+          { entryTiles = wfcTiles wfc,
+            entryOptions = otherOptions
+          }
+      newHistory = wfcHistory wfc `Vector.snoc` entry
+   in wfc
+        { wfcTiles = newTiles,
+          wfcHistory = newHistory
+        }
 
 rollback :: (RandomGen g) => Assets -> WFC -> Rand g WFC
 rollback assets wfc =
