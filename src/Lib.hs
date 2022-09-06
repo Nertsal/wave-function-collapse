@@ -13,7 +13,7 @@ run = do
         case args of
           [] -> ""
           (path : _) -> path
-  putStrLn ("Looking for a tile map in " ++ tileMapPath)
+  putStrLn ("Looking for a tile map in " ++ show tileMapPath)
   assets <- loadAssets tileMapPath
   let world = initialize assets
   Gloss.playIO display background fps world renderWorld handleEvent updateWorld
